@@ -1,0 +1,65 @@
+@font-face {
+  font-family: "BerkeleyMono";
+  src:
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-Regular.woff"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-Regular.woff2"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-Bold.woff"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-Bold.woff2"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-BoldItalic.woff"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-BoldItalic.woff2"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-Italic.woff"),
+    url("fonts/BerkeleyMono/WEB/BerkeleyMono-Italic.woff2");
+}
+
+@font-face {
+  font-family: "PPNeueMontreal";
+  src:
+    url("fonts/PPNeueMontreal/PPNeueMontreal-Medium.otf"),
+    url("fonts/PPNeueMontreal/PPNeueMontreal-Bold.otf"),
+    url("fonts/PPNeueMontreal/PPNeueMontreal-Book.otf"),
+    url("fonts/PPNeueMontreal/PPNeueMontreal-Italic.otf"),
+    url("fonts/PPNeueMontreal/PPNeueMontreal-SemiBolditalic.otf"),
+}
+
+@font-face {
+  font-family: "PPNeueMontreal Thin";
+  src:
+    url("fonts/PPNeueMontreal/PPNeueMontreal-Thin.otf");
+}
+
+@font-face {
+  font-family: "ITC";
+  src:
+    url("fonts/ITC Garamond Std Light Narrow.otf");
+}
+
+html {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+body {
+  font-family: "PPNeueMontreal Thin";
+
+  background: #1C1B19;
+  /* #1A1918; */
+  color: #FCE8C3;
+  /* #E8E8E8; */
+}
+
+code {
+  font-family: "BerkeleyMono", monospace;
+}
+
+h1 {
+  font-family: "ITC", serif;
+}
+
+h2, h3, h4, h5, h6 {
+  font-family: "PPNeueMontreal Thin", serif;
+  text-transform: uppercase;
+}
+
+a {
+    color: #FBB829;
+}
