@@ -10,5 +10,9 @@
             .url = "https://github.com/mattnite/cmark-gfm/archive/f9ccb37e5a15cec5988ad1c0d9cf0033f1b6350c.tar.gz",
             .hash = "12209ee142c51d3d31a99df997df5da9c9e4930ab22c9e0fec569afe2019b623551d",
         },
+        .treesitter = .{
+            .url = "https://github.com/mattnite/tree-sitter/archive/3528f849bb22efbe5f0bd9a98ca25c8f9cda9067.tar.gz",
+
+        },
     },
 }
