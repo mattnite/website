@@ -2,9 +2,13 @@
     .name = "mattnite website",
     .version = "0.0.1",
     .dependencies = .{
-        .koino = .{
-            .url = "https://github.com/kivikakk/koino/archive/5cff47a17652dc94655ded3a2da53a7d3cbfd990.tar.gz",
-            .hash = "1220c98fbb4257997ef217f66e182e26361a7ab2cde67324ab51e72906f5eeea2645",
+        .datetime = .{
+            .url = "https://github.com/frmdstryr/zig-datetime/archive/ddecb4e508e99ad6ab1314378225413959d54756.tar.gz",
+            .hash = "12202cbb909feb6b09164ac997307c6b1ab35cb05a846198cf41f7ec608d842c1761",
+        },
+        .cmark = .{
+            .url = "https://github.com/mattnite/cmark-gfm/archive/f9ccb37e5a15cec5988ad1c0d9cf0033f1b6350c.tar.gz",
+            .hash = "12209ee142c51d3d31a99df997df5da9c9e4930ab22c9e0fec569afe2019b623551d",
         },
     },
 }

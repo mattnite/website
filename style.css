@@ -12,25 +12,21 @@
 }
 
 @font-face {
-  font-family: "PPNeueMontreal";
+  font-family: "Inter";
   src:
-    url("fonts/PPNeueMontreal/PPNeueMontreal-Medium.otf"),
-    url("fonts/PPNeueMontreal/PPNeueMontreal-Bold.otf"),
-    url("fonts/PPNeueMontreal/PPNeueMontreal-Book.otf"),
-    url("fonts/PPNeueMontreal/PPNeueMontreal-Italic.otf"),
-    url("fonts/PPNeueMontreal/PPNeueMontreal-SemiBolditalic.otf"),
+    url("fonts/Inter/Inter-VariableFont_slnt,wght.ttf");
 }
 
 @font-face {
-  font-family: "PPNeueMontreal Thin";
+  font-family: "Inter Thin";
   src:
-    url("fonts/PPNeueMontreal/PPNeueMontreal-Thin.otf");
+    url("fonts/Inter/static/Inter-ExtraLight.ttf");
 }
 
 @font-face {
-  font-family: "ITC";
+  font-family: "Mandatory Plaything";
   src:
-    url("fonts/ITC Garamond Std Light Narrow.otf");
+    url("fonts/mandatory-plaything-font/MandatoryPlaything-nRRd0.ttf");
 }
 
 html {
@@ -39,7 +35,8 @@ html {
 }
 
 body {
-  font-family: "PPNeueMontreal Thin";
+  font-family: "Inter Thin";
+  weight: thin;
 
   background: #1C1B19;
   /* #1A1918; */
@@ -52,14 +49,19 @@ code {
 }
 
 h1 {
-  font-family: "ITC", serif;
+  font-family: "Mandatory Plaything", serif;
 }
 
 h2, h3, h4, h5, h6 {
-  font-family: "PPNeueMontreal Thin", serif;
+  font-family: "Inter", serif;
   text-transform: uppercase;
 }
 
 a {
     color: #FBB829;
+}
+
+img {
+  margin: auto;
+  display: block;
 }
