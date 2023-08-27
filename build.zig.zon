@@ -11,8 +11,8 @@
             .hash = "12209ee142c51d3d31a99df997df5da9c9e4930ab22c9e0fec569afe2019b623551d",
         },
         .treesitter = .{
-            .url = "https://github.com/mattnite/tree-sitter/archive/3528f849bb22efbe5f0bd9a98ca25c8f9cda9067.tar.gz",
-
+            .url = "https://github.com/mattnite/tree-sitter/archive/190c9e0d18c577e52314abd94e4d49791b6639c6.tar.gz",
+            .hash = "12207eba1a24b678afdea32758ef785225eee14577366816e180fdd8d9dd612650c2",
         },
     },
 }

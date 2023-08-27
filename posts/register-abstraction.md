@@ -1,0 +1,329 @@
+It's been a while since my last post and I've got a lot of cool bare metal
+stuff to show you guys. This one is going to go over different methods of
+manipulating Special Function Registers (SFRs), and to end it I'll be covering
+a method that encodes all the SFRs of a microcontroller into a C++ type which
+will allow us to use template metaprogramming!. Let's get this damn thing on
+the road:
+
+When we first learn how to program MCUs in school, we're told how to set,
+clear, and toggle bits using logical operators:
+
+```c
+// setting bit 3
+SOME_REGISTER |= (1 << 3);
+
+// clearing bit 5 and 24
+SOME_REGISTER &= ~((1 << 5) | (1 << 24));
+
+// read and write value to a field
+some_variable = (0xe00 & SOME_REGISTER) >> 9;
+SOME_REGISTER &= ~0xe00 & (2 << 9);
+```
+
+Then in different vendor SDKs and CMSIS there is the use of macros to make
+these a bit more readable.
+
+```c
+SET_BITS(SOME_REGISTER, BIT3);
+CLEAR_BITS(SOME_REGISTER, BIT5 | BIT24);
+
+// CMSIS Field Reading and writing
+id = _FLD2VAL(SCB_CPUID_REVISION, SCB->CPUID);
+SCB->CPUID = _VAL2FLD(SCB_CPUID_REVISION, 0x3) | _VAL2FLD(SCB_CPUID_VARIANT, 0x3);
+```
+
+The CMSIS macro `_VAL2FLD` is defined as the following:
+
+```cpp
+#define _VAL2FLD(field, value)    ((value << field ## _Pos) & field ## _Msk)
+```
+
+It shifts the value by the bit offset, and masks it so that it doesn't
+potentially overflow into any other fields. This is nice, but all that is
+required is for there to be a FIELD_Pos and FIELD_Msk defined, so one could
+incorrectly use field defines for a different register with absolutely zero
+compiler errors or even warnings.
+
+And this is the issue I have with macros, it's just blind text generation and
+there's too much room for abuse without any sort of error checking. That's why
+I prefer leveraging the compiler or language features instead. I'm not 100%
+opposed though, for example, googletest does a great job at using macros as an
+interface for the test framework.
+
+## bitfields
+
+Continuing on, the next logical step is to use using bitfields:
+
+```cpp
+struct SomeRegister {
+     unsigned int foo : 1;
+     unsigned int bar : 3;
+}
+```
+
+See that looks good, you even get to have a named, guarded range of bits that
+won't spill into any others! oh wait but let's just read this from the
+standard:
+
+__C11 §6.7.2.1:__ _"The order of allocation of bit-fields within a unit
+(high-order to low-order or low-order to high-order) is
+implementation-defined."_
+
+So, if we define an SFR with certain bit fields the compiler is able to order
+them however it likes which is a huge problem. Even if the compiler we're using
+ordered them as the user defined, continuing with this option means basing a
+project on undefined behaviour that might change between compilers or different
+versions of the same compiler. We're done here.
+
+## kvasir
+
+Next up we have [kvasir](https://github.com/kvasir-io/kvasir) which is a modern
+C++ library that has a number of functionalities ("boost but for a different
+domain"), but I'm going to focus on their register abstraction since that's
+what we're here for today. They claim that "Despite the fact that we use modern
+C++ tools under the hood the public interface is quite 'C like'". A good
+approach since most embedded development is still done in C.
+
+kvasir takes System View Description (SVD) files, which is a specific XML
+schema for Cortex-M MCUs, and runs its own code generator to create all the
+hardware specific code. Writing and reading to a register looks like this:
+
+```cpp
+apply(clear(AHBClock::Enabled::spi0),
+    set(AHBClock::Enabled::spi1),
+    set(AHBClock::Enabled::i2c0));
+
+if(apply(read(Config::stopLength)) == Config::StopBits::one) {/*...*/}
+```
+
+I really like the code generation from SVD files to account for different SFR
+memory locations accross different MCUs, but I'd like a more C++ like interface
+that treats the registers and bit fields as objects or types -- and this brings
+us to our final register abstraction method:
+
+## BitField Class Template
+
+Ok so this one here is my favourite, it is inspired by
+[this](https://preshing.com/20150324/safe-bitfields-in-cpp/) and
+[this](https://blog.codef00.com/2014/12/06/portable-bitfields-using-c11) blog
+posts, and it's pretty simple and straight forward. You have a BitField class
+template that takes template parameters for the address, offset, and static
+methods for accessing the field. As well as an underlying integral type for
+defining the size of the memory location so that we can handle other
+architectures besides 32-bit.
+
+```cpp
+template <auto address, auto offset, auto width, typename T = std::uint32_t>
+class BitField {
+    static T const max = (1 << width) - 1;
+    static T const mask = max << offset;
+
+    static T read() {
+        return (*reinterpret_cast<volatile T*>(address) & mask) >> offset;
+    }
+
+    static void write(T val) {
+        auto ptr = reinterpret_cast<volatile T*>(address);
+        *ptr = (*ptr & ~mask) | (mask & (val << offset));
+    }
+};
+```
+
+Let's say we have a clock enable for a gpio port, the register it's located is
+at 0x5000, and it's a single bit located at bit 7. We'd define and use it as
+the following:
+
+NOTE: this is an oversimplified example to build on for what's coming next, so
+don't judge :P.
+
+```cpp
+using ClockFlag = BitField<0x5000, 7, 1>;
+
+auto enabled = ClockFlag::read();
+if (!enabled)
+    ClockFlag::write(1);
+```
+
+Once we alias the type of the bitfield flag, the operations for reading and
+writing are clean and readable with those static methods. If we were to write
+two to the flag, it would be masked off, and we would effectively be writing
+zero. The interface for the class template could be expanded to include SFINAEd
+methods for setting and clearing field values if the width is one, or access to
+some of the intermediate values so that the user can determine the max value of
+the field.
+
+Now we have a building block to create a type for a specific MCU.
+
+### svd-alias
+
+Since we are using type aliases to "define" different bit fields, and we'll
+follow in kvasir's steps in using SVD files to generate code, I've named this
+project svd-alias -- I know, pretty boring. In the SVD schema, there is the
+possibility to define read/write access to a register, so we'll be creating
+base classes to contain read and write methods, and inheriting from them to
+enable certain types of access. If you try writing to a read-only register, or
+one of its bit fields, you get a compiler error. This has already come in handy
+for me because I made an incorrect assumption on the operation of a peripheral
+while developing a driver and the compiler error got me on the right track.
+
+The class template for a read only register will look like the following:
+
+```cpp
+template <auto address, typename T = std::uint32_t>
+struct RegisterReadOnly {
+    template <auto offset, auto width>
+    using Field = BitFieldReadOnly<address, offset, width, T>;
+
+    static T read() { return *reinterpret_cast<volatile T*>(address); }
+};
+```
+
+The read function is a simple dereferencing of the address template parameter,
+and we create a Field type alias that fills in the address and type information
+down to a field. This is awesome because we only need to put down the address
+once when creating the type structure of the MCU. We'll also nest the register
+types of a peripheral into a struct for the peripheral, and ditto for the MCU.
+What we end up is the following (which is from the svd-alias code generator):
+
+```cpp
+struct STM32L0x3 {
+    // General-purpose I/Os
+    struct GPIOA {
+		using Mcu = STM32L0x3;
+        // GPIO port mode register
+        struct MODER : public Register<0x50000000> {
+            using MODE0 = Field<0, 2>;    // Port x configuration bits (y = 0..15)
+            using MODE1 = Field<2, 2>;    // Port x configuration bits (y = 0..15)
+            using MODE2 = Field<4, 2>;    // Port x configuration bits (y = 0..15)
+            using MODE3 = Field<6, 2>;    // Port x configuration bits (y = 0..15)
+			...
+        };
+
+		// GPIO port input data register
+        struct IDR : public RegisterReadOnly<0x50000010> {
+            using ID15 = Field<15, 1>;    // Port input data bit (y = 0..15)
+            using ID14 = Field<14, 1>;    // Port input data bit (y = 0..15)
+            using ID13 = Field<13, 1>;    // Port input data bit (y = 0..15)
+            using ID12 = Field<12, 1>;    // Port input data bit (y = 0..15)
+			...
+		};
+	};
+};
+```
+
+So that starts looking pretty slick pretty quick. The register access methods
+are passed down to the specific register definitions, and the Field alias
+matches the access type of the register too. Using the methods look like this:
+
+```cpp
+using Mcu = STM32L0x3;
+auto value = Mcu::GPIOA::IDR::ID13::read();
+
+if (value)
+    Mcu::GPIOA::MODER::MODE13::write(2);
+```
+
+Now what's really cool is that we unlock template metaprogramming and a bunch
+of compile-time computations. For example, I created a variadic template write
+method for a register that writes to multiple fields at the same time. To do
+this, it takes a parameter pack of "Pair" types which contain a field within
+the register and a value to set that field to. The bit math is handled at
+compile time, and we see that the multiple masked operations are optimized to
+one.
+
+First let's see this in use. Assume all of GPIO Port A's pins are configured as
+outputs, but we want to set pins 1, 5, 6, 13, to 1, 0, 0, 1 respectively. The
+important part here is that other pins could be in any state, and we want to
+preserve that state when modifying our pins.
+
+```cpp
+Mcu::GPIOA::ODR::write<FieldPair<
+    Mcu::GPIOA::ODR::ODR1, 1>,
+    ClearField<Mcu::GPIOA::ODR::ODR5>,      // aliased FieldPair
+    ClearField<Mcu::GPIOA::ODR::ODR6>,
+    SetField<Mcu::GPIOA::ODR::ODR13>        // aliased FieldPair
+>();
+```
+
+It does seem verbose, but it's also safer because it can check to make sure
+that the fields belong to the register, and produce a compiler error (fail
+early, fail often as the saying goes). To prove that all the operations are
+optimized into one, we have the following generated assembly of the above (-Os
+optimization level):
+
+```
+ 800004c:       4903            ldr     r1, [pc, #12]   ; (800005c)
+ 800004e:       4a04            ldr     r2, [pc, #16]   ; (8000060)
+ 8000050:       680b            ldr     r3, [r1, #0]
+ 8000052:       401a            ands    r2, r3
+ 8000054:       4b03            ldr     r3, [pc, #12]   ; (8000064)
+ 8000056:       4313            orrs    r3, r2
+ 8000058:       600b            str     r3, [r1, #0]
+
+ 800005c:       50000014        .word   0x50000014
+ 8000060:       ffffdf9d        .word   0xffffdf9d
+ 8000064:       00002002        .word   0x00002002
+ ```
+
+At the bottom we have the address of ODR, the mask, and the value respectively.
+The CPU loads the pointer to ODR, the mask, and then fetches the value at ODR,
+applies the mask to the value read from ODR -- clearing fields we are
+modifying. Finally, it ORs the masked ODR with the values we are applying, and
+stores the modified ODR value to where we read it from. All these operations
+allow us to simply apply values to fields in a register.
+
+One might think that applying the mask might prove inefficient when only bits
+are set in the register -- and in that case only an OR is needed, but if we
+omit the two "ClearFields" in the above example we get:
+
+```
+ 800004c:       4a02            ldr     r2, [pc, #8]    ; (8000058)
+ 800004e:       4903            ldr     r1, [pc, #12]   ; (800005c)
+ 8000050:       6813            ldr     r3, [r2, #0]
+ 8000052:       430b            orrs    r3, r1
+ 8000054:       6013            str     r3, [r2, #0]
+
+ 8000058:       50000014        .word   0x50000014
+ 800005c:       00002002        .word   0x00002002
+ ```
+
+And right there we can see the compiler is optimizing out the mask operation,
+which would be redundant in this situation.
+
+### TODO: read multiple fields
+
+This one isn't implemented yet, but structured bindings from C++17 could be
+used to read multiple field values from a register at the same time. Let's read
+some digital inputs:
+
+```cpp
+auto [button, proximity, reed_switch] = Mcu::GPIOA::IDR::read<
+    Mcu::GPIOA::IDR::IDR3,
+    Mcu::GPIOA::IDR::IDR5,
+    Mcu::GPIOA::IDR::IDR14
+>();
+
+if (button)
+    // do something
+// and so on
+```
+
+This is just a brainstorm at the moment, but I wanted to show a parallel to
+writing to multiple fields on the same clock cycle. As with all these other
+modern C++ bare metal things I've been playing with, I will be testing the
+generated assembly to make sure there are no abstraction costs, or important
+quirks due to the compiler implementation of structured bindings -- so you
+might hear about this one later on.
+
+## Conclusion
+
+While application programmers aren't going to be excited by all these extra
+tools for working at the register level, this library does provide a foundation
+for template based peripheral drivers which is what I'll be covering a lot of
+down the road. I can tell you so far that they are fun to write and work with,
+especially when you can bind configuration to the type, and use RAII to handle
+startup/shutdown of these peripherals. A good example here would be using a
+template parameter for a SPI driver that declares it to be in slave or master
+mode, and have the constructor handle all the setup. AND I should note that
+there is no abstraction cost for this stuff so far -- Ok I'm going to stop
+there and save this for later.

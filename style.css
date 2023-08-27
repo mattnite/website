@@ -30,11 +30,14 @@
 }
 
 html {
-    max-width: 900px;
-    margin: 0 auto;
+  height: 100%;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 body {
+  height: 100%;
+  margin: 0;
   font-family: "Inter Thin";
   weight: thin;
 
@@ -65,3 +68,23 @@ img {
   margin: auto;
   display: block;
 }
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content {
+  flex: 1;
+  /* Additional styles for your content */
+}
+
+
+.footer {
+    margin-top: 2rem;
+    padding: 1rem 2rem;
+    letter-spacing: -0.02em;
+}
+
+

@@ -3,14 +3,64 @@ const Build = std.Build;
 const RunStep = Build.RunStep;
 const LazyPath = Build.LazyPath;
 const OptimizeMode = std.builtin.OptimizeMode;
+const CompileStep = Build.CompileStep;
 
 const datetime = @import("datetime");
 const Post = @import("src/Post.zig");
+const Metadata = @import("src/Metadata.zig");
+
+const drafts: []const Post = &.{
+    .{
+        .title = "Test post",
+        .path = "posts/test.md",
+        .date = "2019-05-24",
+        .description = "",
+        .keywords = &.{},
+    },
+};
+
+// generate_index will automatically sort based on the date
+const posts: []const Post = &.{
+    .{
+        .title = "Template Metaprogramming For Register Abstraction",
+        .path = "posts/register-abstraction.md",
+        .date = "2019-09-03",
+        .description = "",
+        .keywords = &.{},
+    },
+    .{
+        .title = "@import and Packages",
+        .path = "posts/import-and-packages.md",
+        .date = "2021-07-27",
+        .description = "",
+        .keywords = &.{},
+    },
+    .{
+        .title = "Bare Minimum STM32 Toolchain Setup",
+        .path = "posts/bare-minimum-stm32-toolchain-setup.md",
+        .date = "2019-05-24",
+        .description = "",
+        .keywords = &.{},
+    },
+    .{
+        .title = "How libbpf Loads Maps",
+        .path = "posts/libbpf-maps.md",
+        .date = "2020-10-16",
+        .description = "",
+        .keywords = &.{},
+    },
+};
 
 pub fn build(b: *Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    var ordered_posts = std.ArrayList(Post).init(b.allocator);
+
+    std.fs.cwd().deleteTree("zig-out") catch {};
+
+    const datetime_dep = b.dependency("datetime", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const cmark_dep = b.dependency("cmark", .{
         .target = target,
@@ -18,19 +68,53 @@ pub fn build(b: *Build) void {
     });
 
     const libcmark = cmark_dep.artifact("cmark-gfm");
+    const libcmark_extensions = cmark_dep.artifact("cmark-gfm-extensions");
 
-    ordered_posts.appendSlice(posts) catch unreachable;
-
+    var all_posts = std.ArrayList(Post).init(b.allocator);
+    all_posts.appendSlice(posts) catch unreachable;
     if (optimize == .Debug)
-        ordered_posts.appendSlice(drafts) catch unreachable;
+        all_posts.appendSlice(drafts) catch unreachable;
 
-    std.mem.sort(Post, ordered_posts.items, {}, Post.less_than);
+    const gen_post_exe = b.addExecutable(.{
+        .name = "generate_post",
+        .root_source_file = .{ .path = "src/generate_post.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    gen_post_exe.linkLibrary(libcmark);
+    gen_post_exe.linkLibrary(libcmark_extensions);
 
-    generate_index(b, optimize, ordered_posts.items);
-    generate_archive(b, optimize, ordered_posts.items);
-    generate_rss(b, ordered_posts.items);
-    for (ordered_posts.items) |post|
-        generate_post(b, post, optimize);
+    const gen_index_exe = b.addExecutable(.{
+        .name = "generate_index",
+        .root_source_file = .{ .path = "src/generate_index.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    gen_index_exe.addModule("datetime", datetime_dep.module("zig-datetime"));
+
+    const is_debug = optimize == .Debug;
+    generate_index(b, .{
+        .gen_index_exe = gen_index_exe,
+        .gen_post_exe = gen_post_exe,
+        .ordered_posts = all_posts.items,
+        .debug = is_debug,
+    });
+
+    generate_rss(b, all_posts.items);
+    for (all_posts.items) |post|
+        generate_post(b, .{
+            .exe = gen_post_exe,
+            .path = post.path,
+            .metadata = .{
+                .debug = is_debug,
+                .title = post.title,
+                .author = "Matt Knight",
+                .date = post.date,
+                .description = post.description,
+                .keywords = post.keywords,
+                .style_path = "../../style.css",
+            },
+        });
 
     b.installFile("style.css", "www/style.css");
     b.installDirectory(.{
@@ -38,65 +122,69 @@ pub fn build(b: *Build) void {
         .install_dir = .{ .prefix = {} },
         .install_subdir = "www/fonts",
     });
+    b.installDirectory(.{
+        .source_dir = .{ .path = "images" },
+        .install_dir = .{ .prefix = {} },
+        .install_subdir = "www/images",
+    });
+
+    // TODO: more than one set of slides
+    const unzip = b.addSystemCommand(&.{ "unzip", "slides/sycl-workshop-2023.zip" });
+    const workshop_slides = unzip.addPrefixedOutputFileArg("-d", "sycl-workshop-2023");
+    b.installDirectory(.{
+        .source_dir = workshop_slides,
+        .install_dir = .{ .prefix = {} },
+        .install_subdir = "www/slides/sycl-workshop-2023",
+    });
+
+    const s3cmd = b.addSystemCommand(&.{
+        "s3cmd",
+        "sync",
+        "--no-preserve",
+        "--no-mime-magic",
+        "--delete-removed",
+        "--add-header=Cache-Control: max-age=0, must-revalidate",
+        "zig-out/www/",
+        "s3://mattnite.blog",
+    });
+    s3cmd.step.dependOn(b.getInstallStep());
 
     const deploy = b.step("deploy", "Deploy website do prod!");
-    _ = deploy;
-
-    const dumper = b.addExecutable(.{
-        .name = "dumper",
-        .root_source_file = .{ .path = "dumper.zig" },
-    });
-    dumper.linkLibrary(libcmark);
-    b.installArtifact(dumper);
+    deploy.dependOn(&s3cmd.step);
 }
-
-const posts: []const Post = &.{
-    .{
-        .title = "Bare Minimum STM32 Toolchain Setup",
-        .path = "posts/bare-minimum-stm32-toolchain-setup.md",
-        .date = "2019-05-24",
-        .description = "",
-    },
-    .{
-        .title = "Test post",
-        .path = "posts/test.md",
-        .date = "2019-05-24",
-        .description = "",
-    },
-};
-
-const drafts: []const Post = &.{};
 
 fn generate_index(
     b: *Build,
-    optimize: std.builtin.OptimizeMode,
-    ordered_posts: []const Post,
+    opts: struct {
+        gen_index_exe: *CompileStep,
+        gen_post_exe: *CompileStep,
+        ordered_posts: []const Post,
+        debug: bool,
+    },
 ) void {
-    const exe = b.addExecutable(.{
-        .name = "generate_index",
-        .root_source_file = .{ .path = "src/generate_index.zig" },
-    });
-    const exe_run = b.addRunArtifact(exe);
+    const posts_json = std.json.stringifyAlloc(b.allocator, opts.ordered_posts, .{}) catch unreachable;
+    const metadata_json = std.json.stringifyAlloc(b.allocator, .{
+        .debug = opts.debug,
+        .title = "mattnite",
+        .author = "Matt Knight",
+        .date = "", // TODO: today
+        .description = "",
+        .keywords = &.{},
+        .style_path = "style.css",
+    }, .{}) catch unreachable;
 
-    var posts_str = std.ArrayList(u8).init(b.allocator);
-    std.json.stringify(ordered_posts, .{}, posts_str.writer()) catch unreachable;
-    exe_run.addArg(posts_str.items);
-    const index_md = exe_run.addOutputFileArg("index.md");
+    const gen_index_run = b.addRunArtifact(opts.gen_index_exe);
+    gen_index_run.addArg(posts_json);
+    gen_index_run.addFileArg(.{ .path = "about.md" });
+    const index_md = gen_index_run.addOutputFileArg("index.md");
 
-    const pandoc = Pandoc.add(b, optimize);
-    pandoc.add_template(.{ .path = "index.pandoc" });
-    pandoc.add_metadata("title", "mattnite");
-    pandoc.add_input(index_md);
-    const index_html = pandoc.add_output("index.html");
+    const gen_post_run = b.addRunArtifact(opts.gen_post_exe);
+    gen_post_run.addArg(metadata_json);
+    gen_post_run.addFileArg(index_md);
+    const index_html = gen_post_run.addOutputFileArg("index.html");
 
     const install = b.addInstallFile(index_html, "www/index.html");
     b.getInstallStep().dependOn(&install.step);
-}
-
-fn generate_archive(b: *Build, optimize: OptimizeMode, ordered_posts: []const Post) void {
-    _ = b;
-    _ = ordered_posts;
-    _ = optimize;
 }
 
 fn generate_rss(b: *Build, ordered_posts: []const Post) void {
@@ -104,61 +192,20 @@ fn generate_rss(b: *Build, ordered_posts: []const Post) void {
     _ = ordered_posts;
 }
 
-const Pandoc = struct {
-    b: *Build,
-    run_step: *RunStep,
-
-    fn add(b: *Build, optimize: std.builtin.OptimizeMode) Pandoc {
-        const pandoc = Pandoc{
-            .b = b,
-            .run_step = b.addSystemCommand(&.{
-                "pandoc",
-                "-f",
-                "gfm-smart",
-                "-t",
-                "html",
-                "-s",
-                "--fail-if-warnings=true",
-            }),
-        };
-
-        pandoc.add_metadata("debug", b.fmt("{}", .{optimize == .Debug}));
-        pandoc.add_metadata("author-meta", "Matt Knight");
-        return pandoc;
-    }
-
-    fn add_template(pandoc: Pandoc, path: LazyPath) void {
-        pandoc.run_step.addArg("--template");
-        pandoc.run_step.addFileArg(path);
-    }
-
-    fn add_metadata(pandoc: Pandoc, key: []const u8, value: []const u8) void {
-        pandoc.run_step.addArgs(&.{
-            "--metadata",
-            pandoc.b.fmt("{s}={s}", .{ key, value }),
-        });
-    }
-
-    fn add_input(pandoc: Pandoc, input: LazyPath) void {
-        pandoc.run_step.addFileArg(input);
-    }
-
-    fn add_output(pandoc: Pandoc, output_name: []const u8) LazyPath {
-        return pandoc.run_step.addPrefixedOutputFileArg("-o", output_name);
-    }
-};
-
-fn generate_post(b: *Build, post: Post, optimize: std.builtin.OptimizeMode) void {
-    const basename = std.fs.path.basename(post.path);
+fn generate_post(b: *Build, opts: struct {
+    exe: *CompileStep,
+    path: []const u8,
+    metadata: Metadata,
+}) void {
+    const basename = std.fs.path.basename(opts.path);
     const postname = basename[0 .. basename.len - std.fs.path.extension(basename).len];
-    const pandoc = Pandoc.add(b, optimize);
-    pandoc.add_template(.{ .path = "post.pandoc" });
-    pandoc.add_metadata("title", post.title);
-    pandoc.add_metadata("date-meta", post.date);
-    pandoc.add_metadata("description-meta", post.description);
-    pandoc.add_input(.{ .path = post.path });
+    const gen = b.addRunArtifact(opts.exe);
 
-    const post_path = pandoc.add_output(b.fmt("{s}.html", .{postname}));
-    const install = b.addInstallFile(post_path, b.fmt("www/posts/{s}.html", .{postname}));
+    const metadata_json = std.json.stringifyAlloc(b.allocator, opts.metadata, .{}) catch unreachable;
+    gen.addArg(metadata_json);
+    gen.addFileArg(.{ .path = opts.path });
+    const post_path = gen.addOutputFileArg(b.fmt("{s}.html", .{postname}));
+
+    const install = b.addInstallFile(post_path, b.fmt("www/posts/{s}/index.html", .{postname}));
     b.getInstallStep().dependOn(&install.step);
 }
