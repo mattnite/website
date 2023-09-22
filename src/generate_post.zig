@@ -8,6 +8,12 @@ const c = @cImport({
 const template = @embedFile("template.html");
 extern fn cmark_list_syntax_extensions([*c]c.cmark_mem) [*c]c.cmark_llist;
 
+const Footnote = struct {
+    name: []const u8,
+    def_node: *c.cmark_node,
+    ref_nodes: std.ArrayListUnmanaged(*c.cmark_node) = .{},
+};
+
 pub fn main() !void {
     c.cmark_gfm_core_extensions_ensure_registered();
 
@@ -17,7 +23,8 @@ pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(gpa.allocator());
     defer arena.deinit();
 
-    const args = try std.process.argsAlloc(arena.allocator());
+    const allocator = arena.allocator();
+    const args = try std.process.argsAlloc(allocator);
     const metadata_json = args[1];
     const input_path = args[2];
     const output_path = args[3];
@@ -29,9 +36,7 @@ pub fn main() !void {
     const output_file = try std.fs.createFileAbsolute(output_path, .{});
     defer output_file.close();
 
-    var body = std.ArrayList(u8).init(gpa.allocator());
-    defer body.deinit();
-
+    var body = std.ArrayList(u8).init(allocator);
     const body_writer = body.writer();
     const options: c_int =
         c.CMARK_OPT_FOOTNOTES;
@@ -43,64 +48,115 @@ pub fn main() !void {
 
     c.cmark_parser_feed(parser, text_md.ptr, text_md.len);
 
+    var footnotes = std.ArrayList(Footnote).init(allocator);
     const document = c.cmark_parser_finish(parser);
     defer c.cmark_node_free(document);
 
-    const html = c.cmark_render_html(document, options, extensions);
-    try body_writer.writeAll(std.mem.span(html));
-    //var footnote_count: u32 = 0;
-    //var it = c.cmark_node_first_child(document);
-    //while (it != null) : (it = c.cmark_node_next(it)) {
-    //    const node_type = c.cmark_node_get_type(it);
-    //    std.log.info("{x}: type={s}", .{ node_type, c.cmark_node_get_type_string(it) });
-    //    switch (node_type) {
-    //        c.CMARK_NODE_CODE_BLOCK => {
-    //            const literal: ?[]const u8 = if (c.cmark_node_get_literal(it)) |literal|
-    //                std.mem.span(literal)
-    //            else
-    //                null;
+    var it = c.cmark_node_first_child(document);
+    while (it != null) : (it = c.cmark_node_next(it)) {
+        const node_type = c.cmark_node_get_type(it);
+        std.log.info("{x}: type={s}", .{ node_type, c.cmark_node_get_type_string(it) });
+        switch (node_type) {
+            c.CMARK_NODE_CODE_BLOCK => {
+                const literal: ?[]const u8 = if (c.cmark_node_get_literal(it)) |literal|
+                    std.mem.span(literal)
+                else
+                    null;
 
-    //            const fence_info = c.cmark_node_get_fence_info(it);
-    //            _ = literal;
-    //            // TODO: escaping
-    //            std.log.warn("skiping code for <{s}>", .{fence_info});
-    //        },
-    //        c.CMARK_NODE_FOOTNOTE_DEFINITION => {
-    //            footnote_count += 1;
-    //            //<section class="footnotes" data-footnotes>
-    //            //  <ol>
-    //            //    <li id="fn-1">
-    //            //      <p>My reference. <a href="#fnref-1" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="1" aria-label="Back to reference 1">↩</a ></p>
-    //            //    </li>
-    //            //  </ol>
-    //            //</section>
-    //            //
-    //            //<section class="footnotes" data-footnotes>
-    //            //  <ol>
-    //            //    <li id="fn-2">
-    //            //      <p>Every new line should be prefixed with 2 spaces.<br />
-    //            //      This allows you to have a footnote with multiple lines. <a href="#fnref-2" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="1" aria-label="Back to reference 1">↩</a></p>
-    //            //    </li>
-    //            //  </ol>
-    //            //</section>
-    //            //
-    //            //<section class="footnotes" data-footnotes>
-    //            //  <ol>
-    //            //    <li id="fn-note">
-    //            //      <p>Named footnotes will still render with numbers instead of the text but allow easier identification and linking.<br />
-    //            //      This footnote also has been made with a different syntax using 4 spaces for new lines. <a href="#fnref-note" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="1" aria-label="Back to reference 1">↩</a></p>
-    //            //    </li>
-    //            //  </ol>
-    //            //</section>
-    //            const html = c.cmark_render_html(it, options, extensions);
-    //            try body_writer.writeAll(std.mem.span(html));
-    //        },
-    //        else => {
-    //            const html = c.cmark_render_html(it, options, extensions);
-    //            try body_writer.writeAll(std.mem.span(html));
-    //        },
-    //    }
-    //}
+                const fence_info = c.cmark_node_get_fence_info(it);
+                _ = literal;
+                // TODO: escaping
+                std.log.warn("skiping code for <{s}>", .{fence_info});
+            },
+            c.CMARK_NODE_PARAGRAPH => {
+                try body_writer.writeAll("<p>");
+                var child_it = c.cmark_node_first_child(it);
+                while (child_it != null) : (child_it = c.cmark_node_next(child_it)) {
+                    const child_type = c.cmark_node_get_type(child_it);
+                    std.log.info("  {x}: type={s}", .{ child_type, c.cmark_node_get_type_string(child_it) });
+
+                    if (child_type == c.CMARK_NODE_FOOTNOTE_REFERENCE) {
+                        const def = c.cmark_node_parent_footnote_def(child_it) orelse return error.MissingFootnoteDef;
+                        const name = std.mem.span(c.cmark_node_get_literal(def));
+                        const index: usize = for (footnotes.items, 0..) |footnote, i| {
+                            if (std.mem.eql(u8, footnote.name, name))
+                                break i;
+                        } else index: {
+                            const len = footnotes.items.len;
+                            try footnotes.append(.{
+                                .name = name,
+                                .def_node = def,
+                            });
+
+                            break :index len;
+                        };
+
+                        const entry = &footnotes.items[index];
+
+                        const ref_idx = entry.ref_nodes.items.len;
+                        try entry.ref_nodes.append(allocator, child_it.?);
+                        try body_writer.print(
+                            \\[<a class=footnote-ref href="#fn-{s}" id="fnref-{s}-{}" data-footnote-ref="">{s}</a>]
+                        , .{
+                            name,
+                            name,
+                            ref_idx,
+                            name,
+                        });
+                    } else {
+                        const html = c.cmark_render_html(child_it, options, extensions);
+                        try body_writer.writeAll(std.mem.span(html));
+                    }
+                }
+
+                try body_writer.writeAll("</p>");
+            },
+            c.CMARK_NODE_FOOTNOTE_DEFINITION => {}, // ignore
+
+            else => {
+                const html = c.cmark_render_html(it, options, extensions);
+                try body_writer.writeAll(std.mem.span(html));
+            },
+        }
+    }
+
+    if (footnotes.items.len > 0) {
+        try body_writer.writeAll(
+            \\<h2>References</h2>
+            \\<table class="references">
+            \\
+        );
+
+        for (footnotes.items) |footnote| {
+            const text = "text here";
+            try body_writer.print(
+                \\<tr id="fn-{s}">
+                \\  <td>[{s}]:</td>
+                \\  <td>{s} 
+            , .{ footnote.name, footnote.name, text });
+
+            for (footnote.ref_nodes.items, 0..) |_, i| {
+                try body_writer.print(
+                    \\<a href="#fnref-{s}-{}" class="footnote-backref" data-footnote-backref data-footnote-backref-idx="{s}-{}" aria-label="Back to reference {s}-{}">↩</a>
+                , .{
+                    footnote.name, i,
+                    footnote.name, i,
+                    footnote.name, i,
+                });
+
+                if (i != footnote.ref_nodes.items.len - 1) {
+                    try body_writer.writeAll(", ");
+                }
+            }
+
+            try body_writer.writeAll("</tr>\n");
+        }
+
+        try body_writer.writeAll(
+            \\</table>
+            \\
+        );
+    }
 
     const keywords_str = "";
     var buffered = std.io.bufferedWriter(output_file.writer());

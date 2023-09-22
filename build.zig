@@ -137,20 +137,23 @@ pub fn build(b: *Build) void {
         .install_subdir = "www/slides/sycl-workshop-2023",
     });
 
-    const s3cmd = b.addSystemCommand(&.{
-        "s3cmd",
-        "sync",
-        "--no-preserve",
-        "--no-mime-magic",
-        "--delete-removed",
-        "--add-header=Cache-Control: max-age=0, must-revalidate",
-        "zig-out/www/",
-        "s3://mattnite.blog",
-    });
-    s3cmd.step.dependOn(b.getInstallStep());
+    const user = b.option([]const u8, "user", "rsync user");
+    const host = b.option([]const u8, "host", "rsync host");
 
-    const deploy = b.step("deploy", "Deploy website do prod!");
-    deploy.dependOn(&s3cmd.step);
+    const rsync = b.addSystemCommand(&.{
+        "rsync",
+        "-v",
+        "-r",
+        "--delete",
+        "./zig-out/www/",
+    });
+    rsync.step.dependOn(b.getInstallStep());
+
+    if (user != null and host != null)
+        rsync.addArg(b.fmt("{s}@{s}:/root/config/www/", .{ user.?, host.? }));
+
+    const deploy = b.step("deploy", "Deploy website to prod");
+    deploy.dependOn(&rsync.step);
 }
 
 fn generate_index(

@@ -250,11 +250,11 @@ But let's throw in a <b>tag</b>.
 
 Footnotes aren't part of the core Markdown spec, but they [supported by GFM](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#footnotes).
 
-Here is a simple footnote[^1].
+Here is a simple footnote [^1].
 
-A footnote can also have multiple lines[^2].  
+A footnote can also have multiple lines [^2].  
 
-You can also use words, to fit your writing style more closely[^note].
+You can also use words, to fit your writing style more closely [^note].
 
 [^1]: My reference.
 [^2]: Every new line should be prefixed with 2 spaces.  
