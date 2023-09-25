@@ -61,7 +61,7 @@ that declares how/where the program needs to be loaded.
 you can find a massive table laying out this information I have yet to
 decipher, but I digress, let’s get to our BPF program.
 
-== Baby's first BPF Program
+## Baby's first BPF Program
 
 ```zig
 const std = @import("std");

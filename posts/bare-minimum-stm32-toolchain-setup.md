@@ -28,7 +28,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake ..
 
 My project is fairly static at this point so I include it in the beginning of my CMakeLists.txt:
 
-```sh
+```cmake
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/arm-gcc-toolchain.cmake")
 ```

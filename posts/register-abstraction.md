@@ -58,7 +58,7 @@ Continuing on, the next logical step is to use using bitfields:
 struct SomeRegister {
      unsigned int foo : 1;
      unsigned int bar : 3;
-}
+};
 ```
 
 See that looks good, you even get to have a named, guarded range of bits that

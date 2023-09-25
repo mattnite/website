@@ -25,28 +25,28 @@ const posts: []const Post = &.{
         .title = "Template Metaprogramming For Register Abstraction",
         .path = "posts/register-abstraction.md",
         .date = "2019-09-03",
-        .description = "",
+        .description = "Some cursed metaprogramming in C++",
         .keywords = &.{},
     },
     .{
         .title = "@import and Packages",
         .path = "posts/import-and-packages.md",
         .date = "2021-07-27",
-        .description = "",
+        .description = "The system underlaying Zig packages",
         .keywords = &.{},
     },
     .{
         .title = "Bare Minimum STM32 Toolchain Setup",
         .path = "posts/bare-minimum-stm32-toolchain-setup.md",
         .date = "2019-05-24",
-        .description = "",
+        .description = "My initial foray into embeddded toolchains",
         .keywords = &.{},
     },
     .{
         .title = "How libbpf Loads Maps",
         .path = "posts/libbpf-maps.md",
         .date = "2020-10-16",
-        .description = "",
+        .description = "A deep dive into libbpf fundamentals",
         .keywords = &.{},
     },
 };
@@ -56,6 +56,11 @@ pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     std.fs.cwd().deleteTree("zig-out") catch {};
+
+    const clap_dep = b.dependency("clap", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
     const datetime_dep = b.dependency("datetime", .{
         .target = target,
@@ -70,6 +75,13 @@ pub fn build(b: *Build) void {
     const libcmark = cmark_dep.artifact("cmark-gfm");
     const libcmark_extensions = cmark_dep.artifact("cmark-gfm-extensions");
 
+    const treesitter = b.dependency("treesitter", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const libtreesitter = treesitter.artifact("tree-sitter");
+
     var all_posts = std.ArrayList(Post).init(b.allocator);
     all_posts.appendSlice(posts) catch unreachable;
     if (optimize == .Debug)
@@ -81,8 +93,20 @@ pub fn build(b: *Build) void {
         .target = target,
         .optimize = optimize,
     });
+    gen_post_exe.addModule("clap", clap_dep.module("clap"));
     gen_post_exe.linkLibrary(libcmark);
     gen_post_exe.linkLibrary(libcmark_extensions);
+    gen_post_exe.linkLibrary(libtreesitter);
+    gen_post_exe.addCSourceFiles(&.{
+        "src/parsers/bash/parser.c",
+        "src/parsers/bash/scanner.c",
+        "src/parsers/c/parser.c",
+        "src/parsers/cmake/parser.c",
+        "src/parsers/cmake/scanner.c",
+        "src/parsers/cpp/parser.c",
+        "src/parsers/cpp/scanner.c",
+        "src/parsers/zig/parser.c",
+    }, &.{});
 
     const gen_index_exe = b.addExecutable(.{
         .name = "generate_index",
@@ -166,15 +190,6 @@ fn generate_index(
     },
 ) void {
     const posts_json = std.json.stringifyAlloc(b.allocator, opts.ordered_posts, .{}) catch unreachable;
-    const metadata_json = std.json.stringifyAlloc(b.allocator, .{
-        .debug = opts.debug,
-        .title = "mattnite",
-        .author = "Matt Knight",
-        .date = "", // TODO: today
-        .description = "",
-        .keywords = &.{},
-        .style_path = "style.css",
-    }, .{}) catch unreachable;
 
     const gen_index_run = b.addRunArtifact(opts.gen_index_exe);
     gen_index_run.addArg(posts_json);
@@ -182,7 +197,15 @@ fn generate_index(
     const index_md = gen_index_run.addOutputFileArg("index.md");
 
     const gen_post_run = b.addRunArtifact(opts.gen_post_exe);
-    gen_post_run.addArg(metadata_json);
+    gen_post_run.addArgs(&.{ "--title", "mattnite" });
+    gen_post_run.addArgs(&.{ "--author", "MattKnight" });
+    gen_post_run.addArgs(&.{ "--date", "" });
+    gen_post_run.addArgs(&.{ "--description", "" });
+    gen_post_run.addArgs(&.{ "--style_path", "style.css" });
+
+    if (opts.debug)
+        gen_post_run.addArg("--debug");
+
     gen_post_run.addFileArg(index_md);
     const index_html = gen_post_run.addOutputFileArg("index.html");
 
@@ -204,8 +227,16 @@ fn generate_post(b: *Build, opts: struct {
     const postname = basename[0 .. basename.len - std.fs.path.extension(basename).len];
     const gen = b.addRunArtifact(opts.exe);
 
-    const metadata_json = std.json.stringifyAlloc(b.allocator, opts.metadata, .{}) catch unreachable;
-    gen.addArg(metadata_json);
+    gen.addArgs(&.{ "--title", opts.metadata.title });
+    gen.addArgs(&.{ "--author", opts.metadata.author });
+    gen.addArgs(&.{ "--date", opts.metadata.date });
+    gen.addArgs(&.{ "--description", opts.metadata.description });
+    gen.addArgs(&.{ "--style_path", opts.metadata.style_path });
+
+    if (opts.metadata.debug)
+        gen.addArg("--debug");
+
+    // TODO: keywords
     gen.addFileArg(.{ .path = opts.path });
     const post_path = gen.addOutputFileArg(b.fmt("{s}.html", .{postname}));
 
