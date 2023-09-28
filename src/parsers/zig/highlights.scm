@@ -17,34 +17,34 @@ parameter: (IDENTIFIER) @parameter
   field_access: (IDENTIFIER)
 ] @field
 
-;; assume TitleCase is a type
-;(
-;  [
-;    variable_type_function: (IDENTIFIER)
-;    field_access: (IDENTIFIER)
-;    parameter: (IDENTIFIER)
-;  ] @type
-;  (#lua-match? @type "^%u([%l]+[%u%l%d]*)*$")
-;)
-;
-;;; assume all CAPS_1 is a constant
-;(
-;  [
-;    variable_type_function: (IDENTIFIER)
-;    field_access: (IDENTIFIER)
-;  ] @constant
-;  (#lua-match? @constant "^%u[%u%d_]+$")
-;)
-;
+; assume TitleCase is a type
+(
+  [
+    variable_type_function: (IDENTIFIER)
+    field_access: (IDENTIFIER)
+    parameter: (IDENTIFIER)
+  ] @type
+  (#match? @type "^([A-Z][a-z0-9]*)+$")
+)
+
+; assume all CAPS_1 is a constant
+(
+  [
+    variable_type_function: (IDENTIFIER)
+    field_access: (IDENTIFIER)
+  ] @constant
+  (#match? @constant "^[A-Z0-9_]+$")
+)
+
 function: (IDENTIFIER) @function
 function_call: (IDENTIFIER) @function.call
 
 exception: "!" @exception
 
-;(
-;  (IDENTIFIER) @variable.builtin
-;  (#eq? @variable.builtin "_")
-;)
+(
+  (IDENTIFIER) @variable.builtin
+  (#eq? @variable.builtin "_")
+)
 
 (PtrTypeStart "c" @variable.builtin)
 
@@ -61,10 +61,10 @@ exception: "!" @exception
 field_constant: (IDENTIFIER) @constant
 
 (BUILTINIDENTIFIER) @function.builtin
-;
-;((BUILTINIDENTIFIER) @include
-;  (#any-of? @include "@import" "@cImport"))
-;
+
+((BUILTINIDENTIFIER) @include
+  (#any-of? @include "@import" "@cImport"))
+
 (INTEGER) @number
 
 (FLOAT) @float

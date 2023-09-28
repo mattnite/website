@@ -1,12 +1,11 @@
 
-(punctuation_bracket
 [
  "(" ")"
  "{" "}"
  "[" "]"
  "[[" "]]"
  "((" "))"
-] @punctuation.bracket)
+] @punctuation.bracket
 
 [
  ";"
@@ -148,7 +147,7 @@
 
 (number) @number
 ((word) @number
- (#lua-match? @number "^[0-9]+$"))
+ (#match? @number "^[0-9]+$"))
 
 (file_redirect
   destination: (word) @parameter)
@@ -156,10 +155,10 @@
 (file_descriptor) @operator
 
 (simple_expansion
-  "$" @punctuation.special) @none
+  "$" @punctuation.special)
 (expansion
   "${" @punctuation.special
-  "}" @punctuation.special) @none
+  "}" @punctuation.special)
 
 (expansion operator: _ @punctuation.special)
 (expansion "@" . operator: _ @character.special)
@@ -174,7 +173,7 @@
 (variable_name) @variable
 
 ((variable_name) @constant
- (#lua-match? @constant "^[A-Z][A-Z_0-9]*$"))
+ (#match? @constant "^[A-Z][A-Z_0-9]*$"))
 
 (case_item
   value: (word) @parameter)
@@ -185,4 +184,4 @@
 ] @string.regex
 
 ((program . (comment) @preproc)
- (#lua-match? @preproc "^#!/"))
+ (#match? @preproc "^#!/"))

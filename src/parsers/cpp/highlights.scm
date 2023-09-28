@@ -1,7 +1,7 @@
 ; inherits: c
 
-;((identifier) @field
-;  (#lua-match? @field "^m?_.*$"))
+((identifier) @field
+  (#lua-match? @field "^m?_.*$"))
 
 (parameter_declaration
   declarator: (reference_declarator) @parameter)
@@ -14,11 +14,11 @@
 (optional_parameter_declaration
     declarator: (_) @parameter)
 
-(field_expression) @parameter ;; How to highlight this?
+;(field_expression) @parameter ;; How to highlight this?
 
-;(((field_expression
-;     (field_identifier) @method)) @_parent
-; (#has-parent? @_parent template_method function_declarator))
+(((field_expression
+     (field_identifier) @method)) @_parent
+ (#has-parent? @_parent template_method function_declarator))
 
 (field_declaration
   (field_identifier) @field)
@@ -38,8 +38,8 @@
 (auto) @type.builtin
 
 (namespace_identifier) @namespace
-;((namespace_identifier) @type
-;  (#lua-match? @type "^[%u]"))
+((namespace_identifier) @type
+  (#lua-match? @type "^[%u]"))
 
 (case_statement
   value: (qualified_identifier (identifier) @constant))
@@ -62,12 +62,12 @@
     (qualified_identifier
       (qualified_identifier
         (identifier) @function))))
-;((qualified_identifier
-;  (qualified_identifier
-;    (qualified_identifier
-;      (qualified_identifier
-;        (identifier) @function)))) @_parent
-;  (#has-ancestor? @_parent function_declarator))
+((qualified_identifier
+  (qualified_identifier
+    (qualified_identifier
+      (qualified_identifier
+        (identifier) @function)))) @_parent
+  (#has-ancestor? @_parent function_declarator))
 
 (function_declarator
   (template_function
@@ -89,12 +89,12 @@
     (qualified_identifier
       (qualified_identifier
         (identifier) @function.call))))
-;((qualified_identifier
-;  (qualified_identifier
-;    (qualified_identifier
-;      (qualified_identifier
-;        (identifier) @function.call)))) @_parent
-;  (#has-ancestor? @_parent call_expression))
+((qualified_identifier
+  (qualified_identifier
+    (qualified_identifier
+      (qualified_identifier
+        (identifier) @function.call)))) @_parent
+  (#has-ancestor? @_parent call_expression))
 
 (call_expression
   (template_function
@@ -114,13 +114,13 @@
       (qualified_identifier
         (template_function
           (identifier) @function.call)))))
-;((qualified_identifier
-;  (qualified_identifier
-;    (qualified_identifier
-;      (qualified_identifier
-;        (template_function
-;          (identifier) @function.call))))) @_parent
-;  (#has-ancestor? @_parent call_expression))
+((qualified_identifier
+  (qualified_identifier
+    (qualified_identifier
+      (qualified_identifier
+        (template_function
+          (identifier) @function.call))))) @_parent
+  (#has-ancestor? @_parent call_expression))
 
 ; methods
 (function_declarator
@@ -132,29 +132,29 @@
 
 ; constructors
 
-;((function_declarator
-;  (qualified_identifier
-;    (identifier) @constructor))
-;  (#lua-match? @constructor "^%u"))
+((function_declarator
+  (qualified_identifier
+    (identifier) @constructor))
+  (#lua-match? @constructor "^%u"))
 
-;((call_expression
-;  function: (identifier) @constructor)
-;(#lua-match? @constructor "^%u"))
-;((call_expression
-;  function: (qualified_identifier
-;              name: (identifier) @constructor))
-;(#lua-match? @constructor "^%u"))
+((call_expression
+  function: (identifier) @constructor)
+(#lua-match? @constructor "^%u"))
+((call_expression
+  function: (qualified_identifier
+              name: (identifier) @constructor))
+(#lua-match? @constructor "^%u"))
 
-;((call_expression
-;  function: (field_expression
-;              field: (field_identifier) @constructor))
-;(#lua-match? @constructor "^%u"))
+((call_expression
+  function: (field_expression
+              field: (field_identifier) @constructor))
+(#lua-match? @constructor "^%u"))
 
 ;; constructing a type in an initializer list: Constructor ():  **SuperType (1)**
-;((field_initializer
-;  (field_identifier) @constructor
-;  (argument_list))
-; (#lua-match? @constructor "^%u"))
+((field_initializer
+  (field_identifier) @constructor
+  (argument_list))
+ (#lua-match? @constructor "^%u"))
 
 
 ; Constants

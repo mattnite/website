@@ -205,6 +205,8 @@ program code. Here is a chunk of code showing my simplified Zig runtime loader
 rewriting those immediate values:
 
 ```zig
+pub fn main() !void {
+    // ...
     for (self.progs.items) |*prog| {
         const rel_name = try std.mem.join(self.allocator, "", &[_][]const u8{ ".rel", prog.name });
         defer self.allocator.free(rel_name);
@@ -216,7 +218,7 @@ rewriting those immediate values:
         } else continue;
 
         for (std.mem.bytesAsSlice(Elf64_Rel, rel_section.data)) |relo| {
-            const insn_idx = relo.r_offset / @sizeOf(BPF.Insn);
+            const insn_idx = relo.r_offset / @sizeOf(bpf.Insn);
             const symbol = self.elf.get_sym_idx(@truncate(u32, relo.r_info >> 32));
             const map_name = self.elf.get_str(symbol.st_name);
 
@@ -230,6 +232,7 @@ rewriting those immediate values:
             prog.insns[insn_idx].imm = map_fd;
         }
     }
+}
 ```
 
 ## Next Steps: Leveraging Zig’s comptime Features

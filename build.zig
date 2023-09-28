@@ -82,6 +82,13 @@ pub fn build(b: *Build) void {
 
     const libtreesitter = treesitter.artifact("tree-sitter");
 
+    const pcre2_dep = b.dependency("pcre2", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const libpcre2 = pcre2_dep.artifact("pcre2");
+
     var all_posts = std.ArrayList(Post).init(b.allocator);
     all_posts.appendSlice(posts) catch unreachable;
     if (optimize == .Debug)
@@ -97,6 +104,7 @@ pub fn build(b: *Build) void {
     gen_post_exe.linkLibrary(libcmark);
     gen_post_exe.linkLibrary(libcmark_extensions);
     gen_post_exe.linkLibrary(libtreesitter);
+    gen_post_exe.linkLibrary(libpcre2);
     gen_post_exe.addCSourceFiles(&.{
         "src/parsers/bash/parser.c",
         "src/parsers/bash/scanner.c",

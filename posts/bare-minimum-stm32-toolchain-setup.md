@@ -105,9 +105,9 @@ The SDK for the L0 family is called STM32CubeL0. It contains a bunch of code we 
 
 SOURCE_DIR=$1
 BUILD_DIR=$2
-FILE_NAME=en.stm32cubel0.zip
-UNPACKED_NAME=STM32Cube_FW_L0_V1.11.0
-URL=http://some.url/${FILE_NAME}
+FILE_NAME="en.stm32cubel0.zip"
+UNPACKED_NAME="STM32Cube_FW_L0_V1.11.0"
+URL="http://some.url/${FILE_NAME}"
 STM32_CUBE=stm32-cube
 
 if [ ! -d $STM32_CUBE ]; then

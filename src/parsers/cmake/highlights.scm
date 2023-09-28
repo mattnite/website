@@ -11,13 +11,13 @@
  (bracket_argument)
 ] @string
 
-(variable_ref) @none
+;(variable_ref) @none
 (variable) @variable
 
 [
  (bracket_comment)
  (line_comment)
-] @comment @spell
+] @comment
 
 (normal_command (identifier) @function)
 
@@ -83,7 +83,7 @@
 )
 ;
 ((argument) @boolean
-  (#match? @boolean "\\c^(1|on|yes|true|y|0|off|no|false|n|ignore|notfound|.*-notfound)$")
+  (#match? @boolean "\\c^(1|on|ON|yes|YES|true|TRUE|y|0|off|OFF|no|ON|false|FALSE|n|ignore|IGNORE|notfound|NOT_FOUND|.*-notfound)$")
 )
 ;
 (if_command
@@ -125,30 +125,30 @@
   (argument_list
     . (argument) @variable
   )
-  (#match? @_function "\\c^set$")
+  ;(#match? @_function "\\c^set$")
 )
+
+;(normal_command
+;  (identifier) @_function
+;  ;(#match? @_function "\\c^set$")
+;  (argument_list
+;    . (argument)
+;    (
+;    (argument) @_cache @storageclass
+;    .
+;    (argument) @_type @type
+;    ;(#any-of? @_cache "CACHE")
+;    ;(#any-of? @_type "BOOL" "FILEPATH" "PATH" "STRING" "INTERNAL")
+;    )
+;  )
+;)
 
 (normal_command
   (identifier) @_function
-  (#match? @_function "\\c^set$")
+  ;(#match? @_function "\\c^unset$")
   (argument_list
     . (argument)
-    (
-    (argument) @_cache @storageclass
-    .
-    (argument) @_type @type
-    (#any-of? @_cache "CACHE")
-    (#any-of? @_type "BOOL" "FILEPATH" "PATH" "STRING" "INTERNAL")
-    )
-  )
-)
-
-(normal_command
-  (identifier) @_function
-  (#match? @_function "\\c^unset$")
-  (argument_list
-    . (argument)
-    (argument) @storageclass
+    ;(argument) @storageclass
     (#any-of? @storageclass "CACHE" "PARENT_SCOPE")
   )
 )
