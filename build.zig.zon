@@ -1,6 +1,7 @@
 .{
     .name = "mattnite website",
     .version = "0.0.1",
+    .paths = .{ "", "" },
     .dependencies = .{
         .datetime = .{
             .url = "https://github.com/frmdstryr/zig-datetime/archive/ddecb4e508e99ad6ab1314378225413959d54756.tar.gz",

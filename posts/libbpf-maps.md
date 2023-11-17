@@ -65,7 +65,7 @@ decipher, but I digress, let’s get to our BPF program.
 
 ```zig
 const std = @import("std");
-const mem = std.mem
+const mem = std.mem;
 const bpf = @import("bpf");
 
 export var events linksection("maps") = PerfEventArray.init(256, 0);
@@ -228,7 +228,7 @@ pub fn main() !void {
                 }
             } else continue;
 
-            prog.insns[insn_idx].src = BPF.PSEUDO_MAP_FD;
+            prog.insns[insn_idx].src = bpf.PSEUDO_MAP_FD;
             prog.insns[insn_idx].imm = map_fd;
         }
     }

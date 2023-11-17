@@ -1,5 +1,5 @@
-Hello! My name is Matt Knight and I'm a human, I like to do system programming,
-organize events, and fight.
+Hello! My name is Matt Knight. I like systems programming, organizing events,
+and fighting.
 
 I'm active in the Zig programming language community, most notably I'm a
 co-founder of the [Zig Embedded Group](https://github.com/ZigEmbeddedGroup).
