@@ -25,29 +25,36 @@ const posts: []const Post = &.{
         .title = "Template Metaprogramming For Register Abstraction",
         .path = "posts/register-abstraction.md",
         .date = "2019-09-03",
-        .description = "Some cursed metaprogramming in C++",
+        .description = "Some cursed metaprogramming in C++.",
         .keywords = &.{},
     },
     .{
         .title = "@import and Packages",
         .path = "posts/import-and-packages.md",
         .date = "2021-07-27",
-        .description = "The system underlaying Zig packages",
+        .description = "The system underlaying Zig packages.",
         .keywords = &.{},
     },
     .{
         .title = "Bare Minimum STM32 Toolchain Setup",
         .path = "posts/bare-minimum-stm32-toolchain-setup.md",
         .date = "2019-05-24",
-        .description = "My initial foray into embeddded toolchains",
+        .description = "My initial foray into embeddded toolchains.",
         .keywords = &.{},
     },
     .{
         .title = "How libbpf Loads Maps",
         .path = "posts/libbpf-maps.md",
         .date = "2020-10-16",
-        .description = "A deep dive into libbpf fundamentals",
+        .description = "A deep dive into libbpf fundamentals.",
         .keywords = &.{},
+    },
+    .{
+        .title = "Advent of Code 2023: Day 1",
+        .path = "posts/aoc2023_01.md",
+        .date = "2023-12-08",
+        .description = "Notes I took for Aoc 2023 day 1.",
+        .keywords = &.{"AoC"},
     },
 };
 
@@ -124,6 +131,14 @@ pub fn build(b: *Build) void {
     });
     gen_index_exe.addModule("datetime", datetime_dep.module("zig-datetime"));
 
+    const gen_rss_exe = b.addExecutable(.{
+        .name = "generate_rss",
+        .root_source_file = .{ .path = "src/generate_rss.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+    gen_rss_exe.addModule("datetime", datetime_dep.module("zig-datetime"));
+
     const is_debug = optimize == .Debug;
     generate_index(b, .{
         .gen_index_exe = gen_index_exe,
@@ -132,7 +147,11 @@ pub fn build(b: *Build) void {
         .debug = is_debug,
     });
 
-    generate_rss(b, all_posts.items);
+    generate_rss(b, .{
+        .gen_rss_exe = gen_rss_exe,
+        .ordered_posts = all_posts.items,
+        .debug = is_debug,
+    });
     for (all_posts.items) |post|
         generate_post(b, .{
             .exe = gen_post_exe,
@@ -221,9 +240,20 @@ fn generate_index(
     b.getInstallStep().dependOn(&install.step);
 }
 
-fn generate_rss(b: *Build, ordered_posts: []const Post) void {
-    _ = b;
-    _ = ordered_posts;
+fn generate_rss(b: *Build, opts: struct {
+    gen_rss_exe: *CompileStep,
+    ordered_posts: []const Post,
+    debug: bool,
+}) void {
+    const posts_json = std.json.stringifyAlloc(b.allocator, opts.ordered_posts, .{}) catch unreachable;
+
+    const gen = b.addRunArtifact(opts.gen_rss_exe);
+    gen.addArg(posts_json);
+
+    const rss_path = gen.addOutputFileArg("feed.xml");
+
+    const install = b.addInstallFile(rss_path, "www/feed.xml");
+    b.getInstallStep().dependOn(&install.step);
 }
 
 fn generate_post(b: *Build, opts: struct {
