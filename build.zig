@@ -56,6 +56,13 @@ const posts: []const Post = &.{
         .description = "Notes I took for Aoc 2023 day 1.",
         .keywords = &.{"AoC"},
     },
+    .{
+        .title = "Advent of Code 2023: Day 2",
+        .path = "posts/aoc2023_02.md",
+        .date = "2023-12-09",
+        .description = "Notes I took for Aoc 2023 day 2.",
+        .keywords = &.{"AoC"},
+    },
 };
 
 pub fn build(b: *Build) void {
