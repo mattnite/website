@@ -6,18 +6,32 @@ const datetime = @import("datetime");
 const Date = datetime.datetime.Date;
 
 fn format_as_rfc822(date: Date, allocator: Allocator) ![]u8 {
-    return std.fmt.allocPrint(allocator, "{s}, {s} {} {}", .{
+    return std.fmt.allocPrint(allocator, "{s}, {} {s} {} 00:00:00 GMT", .{
         switch (date.dayOfWeek()) {
             .Monday => "Mon",
-            .Tuesday => "Tues",
+            .Tuesday => "Tue",
             .Wednesday => "Wed",
-            .Thursday => "Thurs",
+            .Thursday => "Thu",
             .Friday => "Fri",
             .Saturday => "Sat",
             .Sunday => "Sun",
         },
-        date.monthName(),
         date.day,
+        switch (date.month) {
+            1 => "Jan",
+            2 => "Feb",
+            3 => "Mar",
+            4 => "Apr",
+            5 => "May",
+            6 => "Jun",
+            7 => "Jul",
+            8 => "Aug",
+            9 => "Sep",
+            10 => "Oct",
+            11 => "Nov",
+            12 => "Dec",
+            else => unreachable,
+        },
         date.year,
     });
 }
@@ -41,12 +55,13 @@ pub fn main() !void {
     const now = Date.now();
     try writer.print(
         \\<?xml version="1.0" encoding="utf-8"?>
-        \\<rss version="2.0">
+        \\<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
         \\<channel>
         \\  <title>Matt Knight</title>
         \\  <link>https://mattnite.net/</link>
         \\  <description>Programming, Electronics</description>
         \\  <lastBuildDate>{s}</lastBuildDate>
+        \\  <atom:link href="https://mattnite.net/feed.xml" rel="self" type="application/rss+xml" />
         \\
     , .{try format_as_rfc822(now, arena.allocator())});
 
