@@ -1,0 +1,8 @@
+---
+.title = "Presentations",
+.date = @date("2024-09-29"),
+.author = "Matthew Knight",
+.layout = "blog.shtml",
+.draft = false,
+---
+

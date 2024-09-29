@@ -1,3 +1,12 @@
+---
+.title = "Template Metaprogramming For Register Abstraction",
+.date = @date("2019-09-03"),
+.author = "Matthew Knight",
+.layout = "blog.shtml",
+.draft = false,
+.description = "Some cursed metaprogramming in C++.",
+---
+
 It's been a while since my last post and I've got a lot of cool bare metal
 stuff to show you guys. This one is going to go over different methods of
 manipulating Special Function Registers (SFRs), and to end it I'll be covering

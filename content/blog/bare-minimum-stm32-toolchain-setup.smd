@@ -1,6 +1,15 @@
+---
+.title = "Bare Minimum STM32 Toolchain Setup",
+.date = @date("2019-05-24"),
+.author = "Matthew Knight",
+.layout = "blog.shtml",
+.draft = false,
+.description = "My initial foray into embeddded toolchains.",
+---
+
 The first thing I’m going to cover here is setting up a bare minimum environment that cross-compiles for a microcontroller (MCU). You can probably do this for Windows, especially since I’ll be using cmake, but I’ll just be using Linux for the development environment. Most of this post is reiterating [Michael Caisse's talk](https://www.youtube.com/watch?v=c9Xt6Me3mJ4) at C++Now 2018, and applying it to a NUCLEO-L073RZ development board by STMicro.
 
-![Look at this bucko](https://media.digikey.com/Photos/STMicro%20Photos/NUCLEO-L073RZ.jpg)
+[Look at this bucko]($image.url("https://media.digikey.com/Photos/STMicro%20Photos/NUCLEO-L073RZ.jpg"))
 
 I mostly picked this MCU because it’s made for low power applications which I want to play around with in the future, it’s got a built-in DAC (nice for signal processing), and the GPIO ports can be toggled faster per instruction than other architectures in the STM32 line. It’s also not so big that it’s too complicated to remember all the peripherals, and it comes in SMD packages that are manageable to solder by hand.
 
@@ -22,27 +31,27 @@ For installing it on your system, you’ll notice that there are binaries for di
 
 Since we’re cross compiling we need to be fairly explicit to cmake as to what compiler we want to use, flags, and other configurations. The best way we can do this is to create a toolchain file which contains all the specifics, and then when running cmake just do the following:
 
-```sh
+```bash
 cmake -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake ..
 ```
 
 My project is fairly static at this point so I include it in the beginning of my CMakeLists.txt:
 
-```cmake
+```
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/arm-gcc-toolchain.cmake")
 ```
 
 All the listings I show you today are going to be fragmented so that I cover the important parts, but you’ll be able to see the full files in my [stm32 repo](https://github.com/matt1795/stm32).  They may change slightly over time, so feel free to email me to ask questions down the line. That being said, it should be fairly clear what goes in what file. So the first thing in our toolchain file we need to do is specify our system and processor:
 
-```cmake
+```
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 ```
 
 In our case here, arm is fairly straight forward, but Generic is used for our system name since we’re programming on bare metal, and so there is no OS. Next we set some variables and specify the compilers/binutils:
 
-```cmake
+```
 set(TOOLCHAIN_PATH $ENV{ARM_GCC_BIN})
 set(CROSS_COMPILE arm-none-eabi-)
 
@@ -54,7 +63,7 @@ set(CMAKE_AR            "${TOOLCHAIN_PATH}/${CROSS_COMPILE}ar")
 
 Now one thing cmake does when configuring all of this is validate the compiler by compiling some sort of trivial program. This gets hard to deal with because we need to screw with our cmake cache to get it to work, which I found to make linker configuration difficult in CMakeLists.txt. I know that this compiler is good to go, so I forced cmake to use it without complaint:
 
-```cmake
+```
 # force compiler
 set(CMAKE_C_COMPILER_WORKS TRUE)
 set(CMAKE_CXX_COMPILER_WORKS TRUE)
@@ -62,7 +71,7 @@ set(CMAKE_CXX_COMPILER_WORKS TRUE)
 
 This next listing sets the objcopy command so that we can add a step in our build to take the ouput ELF and create a raw binary file that we can flash our board with. We also tell cmake to compile everything statically since dynamic linking isn’t something we get to use on bare metal:
 
-```cmake
+```
 set(CMAKE_OBJCOPY "${TOOLCHAIN_PATH}/${CROSS_COMPILE}objcopy"
 	CACHE FILEPATH "The toolchain objcopy command" FORCE)
 
@@ -79,7 +88,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 We are going to be setting compiler flags in CMakeLists.txt, but these ones have to do with low-level CPU settings, so they are going to do well here. To be specific we tell the compiler that we are targetting a Cortex-M0+ core, we don’t have a hardware FPU so any floating point operations will be done using software. Our CPU also uses the thumb instruction set which is 16-bit and good for compact code size, finally, the architecture is little endian so we tell the compiler that as well. At the end we store the flags in the cache so that they are used as default values in CMakeLists.txt.
 
-```cmake
+```
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m0plus")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mfloat-abi=soft")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb")
@@ -145,7 +154,7 @@ Now to talk about some of the important compiler flags:
 
 Not included, but will be later on is -fno-rtti, and -fno-exceptions. They are important because RTTI (Run Time Type Information), and exceptions are generally frowned upon for embedded systems due to bloating of the code size. I haven’t included them yet however, because I want to measure what that bloat actually is – I don’t care too much for RTTI, it’s exceptions that I’m curious about.
 
-```cmake
+```
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/arm-gcc-toolchain.cmake")
 project(stm32 LANGUAGES C CXX ASM)

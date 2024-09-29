@@ -1,3 +1,12 @@
+---
+.title = "@import and Packages",
+.date = @date("2021-07-27"),
+.author = "Matthew Knight",
+.layout = "blog.shtml",
+.draft = false,
+.description = "The system underlaying Zig packages.",
+---
+
 The `@import()` builtin is how you use code from outside your file. A
 string literal is given as an argument and this is either a relative path
 to another file or an arbitrary string configured to represent a package.
@@ -30,7 +39,7 @@ const pkg = @import("my_pkg");         // package import
 ```
 
 The other major detail here is that `@import()` returns a type -- I like to
-visualize 
+visualize
 
 ```zig
 const mine = @import("my_file.zig");
@@ -77,7 +86,7 @@ package A and B, made up of (`src/main.zig`, `src/file.zig`) and (`root.zig`,
 B. Package imports are bold arrows with a label corresponding to the string
 used in `@import()`.
 
-![](https://zig.news/uploads/articles/jtsgwk4mxi6pg4npg9e6.png)
+[]($image.url("https://zig.news/uploads/articles/jtsgwk4mxi6pg4npg9e6.png"))
 
 If we wanted to use package A in a program we wrote, we would have the
 following in our `build.zig`:
@@ -113,11 +122,11 @@ explicitly configure that relationship with another call to `addPackage()`.
 Each package has its own import namespace and this allows for situations where
 different packages import the same code using different import strings:
 
-![](https://zig.news/uploads/articles/1sy4q1jybv0mce9e92sh.png)
+[]($image.url("https://zig.news/uploads/articles/1sy4q1jybv0mce9e92sh.png"))
 
 and it allows for different packages to be referenced with the same string:
 
-![](https://zig.news/uploads/articles/hb430uxu57gtpd6v4oky.png)
+[]($image.url("https://zig.news/uploads/articles/hb430uxu57gtpd6v4oky.png"))
 
 This makes for a simple and consistent medium in which to perform package
 management, where package resolution, replacement, and upgrading challenges are

@@ -1,27 +1,17 @@
 .{
     .name = "mattnite website",
     .version = "0.0.1",
-    .paths = .{ "", "" },
     .dependencies = .{
-        .datetime = .{
-            .url = "https://github.com/frmdstryr/zig-datetime/archive/ddecb4e508e99ad6ab1314378225413959d54756.tar.gz",
-            .hash = "12202cbb909feb6b09164ac997307c6b1ab35cb05a846198cf41f7ec608d842c1761",
+        .zine = .{
+            .url = "git+https://github.com/kristoff-it/zine?ref=v0.6.3#9d95313c744c2ca7c466b82725a1fe959d81f6e6",
+            .hash = "1220415067dc7d10b6a3ccd1f3c5b35b5af6e2a7675232af55cebd50f711a55fc7e7",
         },
-        .cmark = .{
-            .url = "https://github.com/mattnite/cmark-gfm/archive/f9ccb37e5a15cec5988ad1c0d9cf0033f1b6350c.tar.gz",
-            .hash = "12209ee142c51d3d31a99df997df5da9c9e4930ab22c9e0fec569afe2019b623551d",
-        },
-        .treesitter = .{
-            .url = "https://github.com/mattnite/tree-sitter/archive/190c9e0d18c577e52314abd94e4d49791b6639c6.tar.gz",
-            .hash = "12207eba1a24b678afdea32758ef785225eee14577366816e180fdd8d9dd612650c2",
-        },
-        .clap = .{
-            .url = "https://github.com/Hejsil/zig-clap/archive/f49b94700e0761b7514abdca0e4f0e7f3f938a93.tar.gz",
-            .hash = "1220f48518ce22882e102255ed3bcdb7aeeb4891f50b2cdd3bd74b5b2e24d3149ba2",
-        },
-        .pcre2 = .{
-            .url = "https://github.com/PCRE2Project/pcre2/archive/79832a79304682ea8f4b4adfcab276081df4be04.tar.gz",
-            .hash = "122055ee7d86f125d9849194f5a52efb2c84e869509f78aa16bcc70bb4e4b0487578",
-        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "content",
+        "layouts",
+        "assets",
     },
 }

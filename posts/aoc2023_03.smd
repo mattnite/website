@@ -1,0 +1,151 @@
+_This post is part of a number that I've written as I complete Advent of Code
+exercises. The purpose is to practice taking notes for other people as I solve a
+problem, and to get used to writing and publishing a post on a nearly daily
+basis._
+
+## [Part 1](https://git.sr.ht/~mattnite/aoc-2023/tree/main/item/src/03_gear_ratios/a.zig)
+
+A part is missing from a gondola. If you add up all the parts in the schematic,
+then you should be able to find what's missing.
+
+The schematic consists of visual representation of the engine:
+
+- Any number adjacent to a symbol, even diagonally, is a part number
+- periods are not symbols
+
+```
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..
+```
+
+In this schematic two numbers are not part numbers because they aren't adjacent
+to symbols: 114 and 58. The goal is to sum all of the part numbers.
+
+### Solution
+
+This is interesting because the bounding box of a part number is dependent on
+its value. Big numbers cover more area.
+
+I'm first going to create two tables, one for symbols and the other for numbers.
+The specific symbols don't matter right now, so it'll just be a list of
+coordinates, and the coordinate of a number will be the right most column. The
+size can be calculated from its value.
+
+```zig
+const Schematic = struct {
+    symbols: List(Coordinate),
+    numbers: Map(Coordinate, u32),
+};
+```
+
+The naive solution is to create a bounding box of possible coordinates that a
+symbol would have to exist in, in order for a number to be a part number, then
+check every single symbol if they exist in that bounding box.
+
+My first answer of 347578 was too low.
+
+### Debugging
+
+First what I'll do is write some tests to ensure there's no off-by-one bugs in
+the bounds checking functions.
+
+Okay so I found the vital mistake in my bounds checking function:
+
+```zig
+fn is_inside(coord: Coordinate, box: BoundingBox) bool {
+    return coord.row >= box.origin.row and
+        coord.row < (box.origin.row + box.width) and
+        coord.col >= box.origin.col and
+        coord.col < (box.origin.col + box.height);
+}
+```
+
+The issue with this function is that `box.width` and `box.height` are swapped.
+Must have been a mixup from when I was thinking in x,y coordinates instead of
+row,col.
+
+Still though! the answer is too low. I'm going to resort to logging so that I
+can get a bird's eye view and maybe pick something out.
+
+Okay so I found my next problem. I added an assert that crashes the program when
+it finds a symbol "inside" a text block. Looks like we have a parsing problem.
+During this process I changed the symbols to a map so I could record the
+specific symbol, and see if there was anything funky there:
+
+```
+info: part number 452 located at a.Coordinate{ .row = 0, .col = 52 } is associated with symbol: '/' at a.Coordinate{ .row = 1, .col = 53 }
+info: part number 712 located at a.Coordinate{ .row = 0, .col = 73 } is associated with symbol: '*' at a.Coordinate{ .row = 1, .col = 73 }
+info: part number 646 located at a.Coordinate{ .row = 0, .col = 97 } is associated with symbol: '*' at a.Coordinate{ .row = 1, .col = 97 }
+info: part number 1 located at a.Coordinate{ .row = 0, .col = 104 } is associated with symbol: '*' at a.Coordinate{ .row = 1, .col = 103 }
+info: part number 958 located at a.Coordinate{ .row = 0, .col = 117 } is associated with symbol: '*' at a.Coordinate{ .row = 1, .col = 117 }
+info: part number 661 located at a.Coordinate{ .row = 1, .col = 37 } is associated with symbol: '-' at a.Coordinate{ .row = 1, .col = 39 }
+thread 8405352 panic: reached unreachable code
+/Users/mattnite/zig/0.11.0/files/lib/std/debug.zig:343:14: 0x100148d2f in assert (three_a)
+    if (!ok) unreachable; // assertion failure
+             ^
+/Users/mattnite/code/aoc-2023/src/03_gear_ratios/a.zig:180:33: 0x10014de13 in main (three_a)
+                std.debug.assert(!symbol_coord.is_inside(text));
+                                ^
+/Users/mattnite/zig/0.11.0/files/lib/std/start.zig:574:37: 0x10014ee6b in main (three_a)
+            const result = root.main() catch |err| {
+                                    ^
+???:?:?: 0x183a410df in ??? (???)
+???:?:?: 0x4c29ffffffffffff in ??? (???)
+fish: Job 1, './zig-out/bin/three_a' terminated by signal SIGABRT (Abort)
+```
+
+Looking at the data, that number, 661, should actually start at column 34 and
+not 37. AH! there it is:
+
+```zig
+pub fn main() !void {
+    // ...
+    while (line_it.next()) |line| : (row += 1) {
+        while (col < line.len) {
+            switch (line[col]) {
+                '1'...'9' => {
+                    const start_col = col;
+                    while (col < line.len and std.ascii.isDigit(line[col])) : (col += 1) {}
+
+                    const num = try std.fmt.parseInt(u32, line[start_col..col], 10);
+                    try schematic.numbers.put(.{
+                        .row = row,
+                        .col = col,
+                    }, num);
+                },
+                // ...
+            }
+        }
+    }
+}
+```
+
+When I'm adding the number entry, I'm using the column iterator value, instead
+of the starting column value for the number.
+
+That does the trick.
+
+## [Part 2](https://git.sr.ht/~mattnite/aoc-2023/tree/main/item/src/03_gear_ratios/b.zig)
+
+A gear is any `*` symbol that is adjacent to exactly two part numbers. Its gear
+ration is the result of multiplying those two numbers together. For the next
+challenge I need to find the gear ratio of every gear and add them all up.
+
+### Solution
+
+I'm going to copy over most of the code, however we're going to convert
+`symbols` to `gears` and associate each coordinate with a gear ratio and the
+count of part numbers. We do a naive scan of the numbers, and for the adjacent
+ones we increment the count, and accumulate the ratio using `*=`. Then all
+that's left is ripping through and summing all the entries with exactly two
+numbers.
+
+Worked first try.

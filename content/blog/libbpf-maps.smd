@@ -1,3 +1,12 @@
+---
+.title = "How libbpf Loads Maps",
+.date = @date("2020-10-16"),
+.author = "Matthew Knight",
+.layout = "blog.shtml",
+.draft = false,
+.description = "A deep dive into libbpf fundamentals.",
+---
+
 *This post was originally on my employer's website https://cmd.com, but
 the website is no longer up due Elastic's acquisition of Cmd. I got
 permission to move this post to my personal blog. The old title used to
@@ -114,7 +123,7 @@ single binary at the end of the build process.
 
 ## Parsing ELF
 
-![ELF](../images/elf.gif)
+![ELF](/images/elf.gif)
 
 We’ll be attaching the BPF program to a raw socket on the loopback device so
 that it’s run when packets are sent or received. Now let’s inspect the ELF
