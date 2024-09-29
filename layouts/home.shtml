@@ -17,12 +17,14 @@
       </li>
     </ul>
 
+<!--
     <h2>Presentations</h2>
     <ul :loop="$site.page('presentations').subpages()">
       <li>
         <a href="$loop.it.link()" :text="$loop.it.title"></a>
       </li>
     </ul>
+  -->
 
   </body>
 </html>

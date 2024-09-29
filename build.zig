@@ -1,85 +1,66 @@
 const std = @import("std");
 const Build = std.Build;
-const RunStep = Build.RunStep;
-const LazyPath = Build.LazyPath;
-const OptimizeMode = std.builtin.OptimizeMode;
-const CompileStep = Build.CompileStep;
-
-const datetime = @import("datetime");
-const Post = @import("src/Post.zig");
-const Metadata = @import("src/Metadata.zig");
-
-const drafts: []const Post = &.{
-    .{
-        .title = "Test post",
-        .path = "posts/test.md",
-        .date = "2019-05-24",
-        .description = "",
-        .keywords = &.{},
-    },
-};
-
-// generate_index will automatically sort based on the date
-const posts: []const Post = &.{
-    .{
-        .title = "Template Metaprogramming For Register Abstraction",
-        .path = "posts/register-abstraction.md",
-        .date = "2019-09-03",
-        .description = "Some cursed metaprogramming in C++.",
-        .keywords = &.{},
-    },
-    .{
-        .title = "@import and Packages",
-        .path = "posts/import-and-packages.md",
-        .date = "2021-07-27",
-        .description = "The system underlaying Zig packages.",
-        .keywords = &.{},
-    },
-    .{
-        .title = "Bare Minimum STM32 Toolchain Setup",
-        .path = "posts/bare-minimum-stm32-toolchain-setup.md",
-        .date = "2019-05-24",
-        .description = "My initial foray into embeddded toolchains.",
-        .keywords = &.{},
-    },
-    .{
-        .title = "How libbpf Loads Maps",
-        .path = "posts/libbpf-maps.md",
-        .date = "2020-10-16",
-        .description = "A deep dive into libbpf fundamentals.",
-        .keywords = &.{},
-    },
-    .{
-        .title = "Advent of Code 2023: Day 1",
-        .path = "posts/aoc2023_01.md",
-        .date = "2023-12-08",
-        .description = "Notes I took for Aoc 2023 day 1.",
-        .keywords = &.{"AoC"},
-    },
-    .{
-        .title = "Advent of Code 2023: Day 2",
-        .path = "posts/aoc2023_02.md",
-        .date = "2023-12-09",
-        .description = "Notes I took for Aoc 2023 day 2.",
-        .keywords = &.{"AoC"},
-    },
-    .{
-        .title = "Advent of Code 2023: Day 3",
-        .path = "posts/aoc2023_03.md",
-        .date = "2023-12-10",
-        .description = "Notes I took for Aoc 2023 day 3.",
-        .keywords = &.{"AoC"},
-    },
-};
 
 const zine = @import("zine");
 
 pub fn build(b: *Build) void {
+    const user = b.option([]const u8, "user", "rsync user");
+    const host = b.option([]const u8, "host", "rsync host");
+
     zine.website(b, .{
-        .title = "Sample Website",
-        .host_url = "https://sample.com",
+        .title = "Matthew Knight's Website",
+        .host_url = "https://mattnite.net",
         .content_dir_path = "content",
         .layouts_dir_path = "layouts",
         .assets_dir_path = "assets",
+        .static_assets = &.{
+            "fonts/Inter/Inter-VariableFont_slnt,wght.ttf",
+            "fonts/Inter/static/Inter-Medium.ttf",
+            "fonts/Inter/static/Inter-Light.ttf",
+            "fonts/Inter/static/Inter-Thin.ttf",
+            "fonts/Inter/static/Inter-Bold.ttf",
+            "fonts/Inter/static/Inter-Regular.ttf",
+            "fonts/Inter/static/Inter-ExtraBold.ttf",
+            "fonts/Inter/static/Inter-ExtraLight.ttf",
+            "fonts/Inter/static/Inter-Black.ttf",
+            "fonts/Inter/static/Inter-SemiBold.ttf",
+            //"assets/fonts/Inter/OFL.txt",
+            //"assets/fonts/Inter/README.txt",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-Regular.woff2",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-Regular.woff",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-BoldItalic.woff",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-Bold.woff2",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-Italic.woff",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-BoldItalic.woff2",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-Bold.woff",
+            "fonts/BerkeleyMono/WEB/BerkeleyMono-Italic.woff2",
+            "fonts/BerkeleyMono/TTF/BerkeleyMono-Regular.ttf",
+            "fonts/BerkeleyMono/TTF/BerkeleyMono-Bold.ttf",
+            "fonts/BerkeleyMono/TTF/BerkeleyMono-BoldItalic.ttf",
+            "fonts/BerkeleyMono/TTF/BerkeleyMono-Italic.ttf",
+            "fonts/BerkeleyMono/OTF/BerkeleyMono-Regular.otf",
+            "fonts/BerkeleyMono/OTF/BerkeleyMono-Bold.otf",
+            "fonts/BerkeleyMono/OTF/BerkeleyMono-Italic.otf",
+            "fonts/BerkeleyMono/OTF/BerkeleyMono-BoldItalic.otf",
+            //"assets/fonts/mandatory-plaything-font/misc/FSLA_NonCommercial_License-4726.html",
+            //"assets/fonts/mandatory-plaything-font/misc/Get Commercial License-cca5.url",
+            "fonts/mandatory-plaything-font/MandatoryPlaything-nRRd0.ttf",
+            //"assets/fonts/mandatory-plaything-font/info.txt",
+        },
     });
+
+    const rsync = b.addSystemCommand(&.{
+        "rsync",
+        "-v",
+        "-r",
+        "--delete",
+        "./zig-out/",
+    });
+    rsync.step.dependOn(b.getInstallStep());
+
+    if (user != null and host != null)
+        rsync.addArg(b.fmt("{s}@{s}:/root/config/www/", .{ user.?, host.? }));
+
+    const deploy = b.step("deploy", "Deploy website to prod");
+    deploy.dependOn(&rsync.step);
 }
