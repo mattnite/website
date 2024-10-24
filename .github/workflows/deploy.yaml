@@ -19,7 +19,7 @@ jobs:
         run: zig build
 
       - name: Upload Artifact
-        uses: actions/upload-pages-artifact
+        uses: actions/upload-pages-artifact@v3
         id: deployment
         with:
           path: zig-out
