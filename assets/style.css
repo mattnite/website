@@ -107,6 +107,10 @@ img {
   display: block;
 }
 
+blockquote {
+  font-style: italic;
+}
+
 .wrapper {
   display: flex;
   flex-direction: column;
