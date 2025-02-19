@@ -75,6 +75,7 @@ html {
 body {
   height: 100%;
   /*margin: 0; */
+  margin-bottom: 20px;
   font-family: "Inter Thin";
   weight: thin;
 
