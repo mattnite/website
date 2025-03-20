@@ -1,0 +1,9 @@
+---
+.title = "Unsubscribe",
+.date = @date("2024-03-09T00:00:00"),
+.author = "Matthew Knight",
+.layout = "unsubscribe.shtml",
+.draft = false,
+---
+
+If you'd like to stop receiving emails from me, please enter your email below:

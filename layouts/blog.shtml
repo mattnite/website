@@ -11,6 +11,8 @@
       <nav>
         <a href="/">Home</a>
         <a href="https://github.com/mattnite">GitHub</a>
+        <a href="/newsletter">Newsletter</a>
+        <a href="/rss.xml">RSS</a>
       </nav>
     </header>
     <h1 :text="$page.title"></h1>

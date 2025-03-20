@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title :text="$site.title"></title>
+    <link rel="stylesheet" href="$site.asset('style.css').link()">
+    <script data-goatcounter="https://mattnite.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="/">Home</a>
+        <a href="https://github.com/mattnite">GitHub</a>
+        <a href="/newsletter">Newsletter</a>
+        <a href="/rss.xml">RSS</a>
+      </nav>
+    </header>
+    <h1 :text="$page.title"></h1>
+    <div :html="$page.content()"></div>
+    <form id="subscribeForm" onsubmit="submitForm(event)">
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required>
+      <button>submit</button>
+      <div id="errorMessage" class="error-msg"></div>
+    </form>
+    <script>
+      function submitForm(event) {
+        event.preventDefault();
+
+        const formData = new FormData(document.getElementById('subscribeForm'));
+        fetch('https://newsletter.mattnite.net/subscribe', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/success';
+            }
+        })
+
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+
+          window.location.href = '/success';
+        })
+        .catch(error => {
+          // On error, display error message
+          const errorDiv = document.getElementById('errorMessage');
+          errorDiv.textContent = 'Error submitting form. Please try again.';
+          errorDiv.style.display = 'block';
+          console.error('Error:', error);
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -5,6 +5,7 @@
 .layout = "home.shtml",
 .draft = false,
 .alternatives = [{
+  .name = "rss",
   .layout = "rss.xml",
   .output = "rss.xml",
 }],

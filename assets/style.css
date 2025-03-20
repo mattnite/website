@@ -144,6 +144,11 @@ blockquote {
   color: #0AAEB3;
 }
 
+.error-msg {
+  color: var(--srcery-red);
+  display: none;
+}
+
 code .attribute             { color: var(--srcery-white-bright)   }
 code .boolean               { color: var(--srcery-magenta-bright) }
 code .character             { color: var(--srcery-magenta-bright) }
