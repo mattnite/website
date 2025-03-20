@@ -4,9 +4,6 @@ const Build = std.Build;
 const zine = @import("zine");
 
 pub fn build(b: *Build) void {
-    const user = b.option([]const u8, "user", "rsync user");
-    const host = b.option([]const u8, "host", "rsync host");
-
     zine.website(b, .{
         .title = "Matthew Knight's Website",
         .host_url = "https://mattnite.net",
@@ -48,19 +45,4 @@ pub fn build(b: *Build) void {
             //"assets/fonts/mandatory-plaything-font/info.txt",
         },
     });
-
-    const rsync = b.addSystemCommand(&.{
-        "rsync",
-        "-v",
-        "-r",
-        "--delete",
-        "./zig-out/",
-    });
-    rsync.step.dependOn(b.getInstallStep());
-
-    if (user != null and host != null)
-        rsync.addArg(b.fmt("{s}@{s}:/root/config/www/", .{ user.?, host.? }));
-
-    const deploy = b.step("deploy", "Deploy website to prod");
-    deploy.dependOn(&rsync.step);
 }

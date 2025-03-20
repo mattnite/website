@@ -1,10 +1,11 @@
 .{
-    .name = "mattnite website",
+    .name = .mattnite_website,
     .version = "0.0.1",
+    .fingerprint = 0xfb52a59d63cd1c31,
     .dependencies = .{
         .zine = .{
-            .url = "git+https://github.com/kristoff-it/zine#8f53affff9ead88c04c3dd277d9b82f6bc49f9c1",
-            .hash = "122016fb06fd5e85a6b2d3ecde186fd2b8ffadde48fca98e062b988c2e3cf3980ed2",
+            .url = "git+https://github.com/kristoff-it/zine#717b3afec72438ffed364e04c7ca33aa5d4fa5cb",
+            .hash = "zine-0.0.0-ou6nINz4BQCRrTlsi6kI5wfCt6W_Rs9bahdI5ShUhPeG",
         },
     },
     .paths = .{

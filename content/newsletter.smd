@@ -1,0 +1,12 @@
+---
+.title = "Newsletter",
+.date = @date("2024-03-09T00:00:00"),
+.author = "Matthew Knight",
+.layout = "newsletter.shtml",
+.draft = false,
+---
+
+Whenever I create a new post or have something to share about projects I work
+on, I send out an email to readers notifying them that this has happened.
+You'll find RSS on the nav bar, but the newsletter may speak to you if you
+prefer email notifications.
